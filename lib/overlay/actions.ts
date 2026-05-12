@@ -155,3 +155,14 @@ export async function reextract(formData: FormData) {
   revalidatePath(`/extract/${extractionId}`);
   revalidatePath("/extract");
 }
+
+export async function deleteExtraction(formData: FormData) {
+  const extractionId = Number(formData.get("extractionId"));
+  if (!Number.isInteger(extractionId)) throw new Error("Invalid extractionId");
+
+  await db
+    .delete(schema.extractions)
+    .where(eq(schema.extractions.id, extractionId));
+
+  revalidatePath("/extract");
+}
