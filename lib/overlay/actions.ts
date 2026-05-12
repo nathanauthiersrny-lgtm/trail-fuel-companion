@@ -1,9 +1,11 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 import { fetchArticle } from "./fetch-article";
 import { extractRulesFromExtraction } from "./extract-rules";
+import { ruleSchema } from "./schema";
 
 export type ExtractionResult =
   | { ok: true; id: number; ruleCount: number | null; extractError: string | null }
@@ -74,4 +76,82 @@ export async function createExtraction(
 
   revalidatePath("/extract");
   return { ok: true, id: row.id, ruleCount, extractError };
+}
+
+const RULE_STATUSES = ["proposed", "accepted", "rejected", "modified"] as const;
+type RuleStatus = (typeof RULE_STATUSES)[number];
+
+export async function setRuleStatus(formData: FormData) {
+  const ruleId = Number(formData.get("ruleId"));
+  const status = formData.get("status");
+  if (!Number.isInteger(ruleId)) throw new Error("Invalid ruleId");
+  if (typeof status !== "string" || !RULE_STATUSES.includes(status as RuleStatus)) {
+    throw new Error("Invalid status");
+  }
+  const extractionId = Number(formData.get("extractionId"));
+
+  await db
+    .update(schema.proposedRules)
+    .set({ status: status as RuleStatus })
+    .where(eq(schema.proposedRules.id, ruleId));
+
+  if (Number.isInteger(extractionId)) {
+    revalidatePath(`/extract/${extractionId}`);
+  }
+  revalidatePath("/extract");
+}
+
+export type EditRuleResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function editRule(
+  _prev: EditRuleResult | null,
+  formData: FormData,
+): Promise<EditRuleResult> {
+  const ruleId = Number(formData.get("ruleId"));
+  const extractionId = Number(formData.get("extractionId"));
+  const ruleJsonText = formData.get("ruleJson");
+  if (!Number.isInteger(ruleId)) return { ok: false, error: "Invalid ruleId" };
+  if (typeof ruleJsonText !== "string" || !ruleJsonText.trim()) {
+    return { ok: false, error: "JSON required" };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(ruleJsonText);
+  } catch (e) {
+    return { ok: false, error: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}` };
+  }
+
+  const v = ruleSchema.safeParse(parsed);
+  if (!v.success) {
+    const first = v.error.issues[0];
+    const path = first.path.join(".") || "(root)";
+    return { ok: false, error: `Schema error at ${path}: ${first.message}` };
+  }
+
+  await db
+    .update(schema.proposedRules)
+    .set({ ruleJson: JSON.stringify(v.data), status: "modified" })
+    .where(eq(schema.proposedRules.id, ruleId));
+
+  if (Number.isInteger(extractionId)) {
+    revalidatePath(`/extract/${extractionId}`);
+  }
+  revalidatePath("/extract");
+  return { ok: true };
+}
+
+export async function reextract(formData: FormData) {
+  const extractionId = Number(formData.get("extractionId"));
+  if (!Number.isInteger(extractionId)) throw new Error("Invalid extractionId");
+
+  await db
+    .delete(schema.proposedRules)
+    .where(eq(schema.proposedRules.extractionId, extractionId));
+
+  await extractRulesFromExtraction(extractionId);
+  revalidatePath(`/extract/${extractionId}`);
+  revalidatePath("/extract");
 }

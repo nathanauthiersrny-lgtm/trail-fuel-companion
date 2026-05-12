@@ -1,4 +1,5 @@
 import { desc } from "drizzle-orm";
+import Link from "next/link";
 import { db, schema } from "@/db";
 import { ExtractForm } from "./_components/extract-form";
 
@@ -34,9 +35,12 @@ export default async function ExtractPage() {
                     #{row.id} · {row.source} ·{" "}
                     <StatusBadge status={row.status} />
                   </span>
-                  <span className="text-xs text-gray-500">
-                    {row.createdAt.toLocaleString()}
-                  </span>
+                  <Link
+                    href={`/extract/${row.id}`}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Review →
+                  </Link>
                 </div>
                 {row.sourceUrl && (
                   <a
@@ -56,6 +60,9 @@ export default async function ExtractPage() {
                     {row.sourceText.length > 240 ? "…" : ""}
                   </p>
                 )}
+                <p className="text-[10px] text-gray-400">
+                  {row.createdAt.toLocaleString()}
+                </p>
               </li>
             ))}
           </ul>
