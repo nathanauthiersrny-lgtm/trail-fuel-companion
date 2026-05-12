@@ -81,6 +81,10 @@ export default async function ExtractPage() {
                     <span className="font-mono text-xs text-gray-500">
                       #{row.id} · {row.source} ·{" "}
                       <StatusBadge status={row.status} />
+                      <QualityIcon
+                        score={row.qualityScore}
+                        warnings={row.qualityWarnings}
+                      />
                     </span>
                     <div className="flex items-center gap-3">
                       <Link
@@ -154,6 +158,26 @@ function StatusBadge({ status }: { status: string }) {
         ? "text-red-600"
         : "text-gray-600";
   return <span className={color}>{status}</span>;
+}
+
+function QualityIcon({
+  score,
+  warnings,
+}: {
+  score: "good" | "weak" | "bad" | null;
+  warnings: string[] | null;
+}) {
+  if (!score || score === "good") return null;
+  const icon = score === "weak" ? "🟡" : "🔴";
+  const tooltip =
+    warnings && warnings.length > 0
+      ? `${score}: ${warnings.join(" · ")}`
+      : score;
+  return (
+    <span className="ml-1" title={tooltip}>
+      {icon}
+    </span>
+  );
 }
 
 function Counter({

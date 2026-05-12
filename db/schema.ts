@@ -12,6 +12,8 @@ export const extractions = sqliteTable("extractions", {
     .notNull()
     .default("pending"),
   errorMessage: text("error_message"),
+  qualityScore: text("quality_score", { enum: ["good", "weak", "bad"] }),
+  qualityWarnings: text("quality_warnings", { mode: "json" }).$type<string[]>(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 

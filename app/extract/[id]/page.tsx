@@ -68,6 +68,13 @@ export default async function ExtractionDetail({
         )}
       </header>
 
+      {ext.qualityScore && ext.qualityScore !== "good" && (
+        <QualityBanner
+          score={ext.qualityScore}
+          warnings={ext.qualityWarnings ?? []}
+        />
+      )}
+
       <details className="rounded border border-gray-200 bg-white">
         <summary className="cursor-pointer p-3 text-sm font-medium">
           Source text ({ext.sourceText.length} chars)
@@ -112,6 +119,42 @@ export default async function ExtractionDetail({
         )}
       </section>
     </main>
+  );
+}
+
+function QualityBanner({
+  score,
+  warnings,
+}: {
+  score: "weak" | "bad";
+  warnings: string[];
+}) {
+  const styles =
+    score === "bad"
+      ? "border-red-300 bg-red-50 text-red-900"
+      : "border-amber-300 bg-amber-50 text-amber-900";
+  const icon = score === "bad" ? "🔴" : "🟡";
+  const label = score === "bad" ? "Bad sample" : "Weak sample";
+  return (
+    <div className={`rounded border ${styles} p-3 text-sm`}>
+      <p className="font-medium">
+        {icon} {label}
+      </p>
+      {warnings.length > 0 ? (
+        <ul className="mt-1 list-disc pl-5 text-xs">
+          {warnings.map((w, i) => (
+            <li key={i}>{w}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1 text-xs italic">
+          No specific concerns provided by the model.
+        </p>
+      )}
+      <p className="mt-2 text-xs">
+        Rules below are still extracted; use your judgment when accepting them.
+      </p>
+    </div>
   );
 }
 

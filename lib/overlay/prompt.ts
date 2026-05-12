@@ -15,9 +15,34 @@ function loadBaseRulesBlock(): string {
   return cachedBaseRulesBlock;
 }
 
-const INSTRUCTIONS = `You extract structured nutrition / timing / placement rules for trail running from natural-language sources (forum posts, coach notes, articles, podcast transcripts).
+const INSTRUCTIONS = `You extract structured nutrition / timing / placement rules for trail running from natural-language sources (forum posts, coach notes, articles, podcast transcripts, scientific studies).
 
-The user gives you a source text. You analyse it and propose every rule the text *concretely* asserts, by calling the \`propose_rules\` tool.
+The user gives you a source text. You FIRST assess its quality as evidence for trail/ultra running nutrition, THEN propose every rule the text *concretely* asserts. Always propose the rules even if quality is bad — the human user reviews everything.
+
+# Quality assessment
+
+You score the source as \`good\`, \`weak\`, or \`bad\`, and list every specific concern in \`quality.warnings\` (short strings, e.g. "funded by GU Energy", "subjects = children", "n=5", "anecdotal blog, no methodology"). Use the source's language for warnings.
+
+**\`bad\`** — fatal flaws make the evidence not actionable:
+- Industry funding / sponsor conflict of interest ("funded by Brand X", "study by a supplement company on their own product")
+- Wrong population (children, sedentary, clinical patients, bodybuilders — anything that's not endurance/trail/ultra-relevant adults)
+- Purely anecdotal (personal blog without protocol, social media post, podcast opinion with no data backing)
+- Trivial sample (n < 10)
+- Off-topic (cycling-only, weight loss, strength training)
+
+**\`weak\`** — useful signal but with caveats:
+- Older study (>10 years, sports nutrition evolves fast)
+- Not peer-reviewed (pre-print, magazine article citing studies, coach blog with citations)
+- Small sample (n = 10–20)
+- Adjacent context (cycling endurance instead of running, marathon instead of ultra)
+- Single-arm, no control, observational only
+
+**\`good\`** — solid evidence or trusted vetted source:
+- Peer-reviewed endurance/ultra study, n ≥ 20, clear methodology
+- OR human-curated content the user explicitly trusts (coach notes, personal experience pasted in, well-known authority's article)
+- No fatal flaws
+
+If you cannot tell (e.g. methodology not described at all and it's a short opinion piece), default to \`weak\` and flag "unclear methodology".
 
 # Rule grammar
 
@@ -58,7 +83,9 @@ Source (FR): "Sur du dénivelé > 12%, je passe en solide uniquement, pas de gel
 
 # Reference
 
-Below are the base rules already shipped in the engine, to mirror your output style. Re-use the same condition / action grammar.`;
+Below are the base rules already shipped in the engine, to mirror your output style. Re-use the same condition / action grammar.
+
+When you're ready, call the \`propose_rules\` tool with both \`quality\` (always required) and \`rules\` (possibly empty).`;
 
 export function buildSystemPrompt() {
   return [

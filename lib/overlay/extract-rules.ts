@@ -13,7 +13,13 @@ const proposedRuleSchema = z.object({
   source_quote: z.string().min(1),
 });
 
+const qualityScoreSchema = z.enum(["good", "weak", "bad"]);
+
 const proposeRulesInputSchema = z.object({
+  quality: z.object({
+    score: qualityScoreSchema,
+    warnings: z.array(z.string()),
+  }),
   rules: z.array(proposedRuleSchema),
 });
 
@@ -27,6 +33,8 @@ function getClient(): Anthropic {
 
 export type ExtractionRunResult = {
   ruleCount: number;
+  qualityScore: "good" | "weak" | "bad";
+  qualityWarnings: string[];
   cacheReadTokens: number;
   cacheWriteTokens: number;
   inputTokens: number;
@@ -82,6 +90,14 @@ export async function extractRulesFromExtraction(
     );
   }
 
+  await db
+    .update(schema.extractions)
+    .set({
+      qualityScore: parsed.data.quality.score,
+      qualityWarnings: parsed.data.quality.warnings,
+    })
+    .where(eq(schema.extractions.id, extractionId));
+
   if (parsed.data.rules.length > 0) {
     await db.insert(schema.proposedRules).values(
       parsed.data.rules.map((entry) => ({
@@ -96,6 +112,8 @@ export async function extractRulesFromExtraction(
   const usage = response.usage;
   return {
     ruleCount: parsed.data.rules.length,
+    qualityScore: parsed.data.quality.score,
+    qualityWarnings: parsed.data.quality.warnings,
     cacheReadTokens: usage.cache_read_input_tokens ?? 0,
     cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
     inputTokens: usage.input_tokens,
