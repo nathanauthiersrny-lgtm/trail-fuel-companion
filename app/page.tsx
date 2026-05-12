@@ -15,6 +15,12 @@ export default function Home() {
         >
           → Extract rules from a paste or URL
         </Link>
+        <Link
+          href="/overlays"
+          className="block rounded border border-gray-300 p-3 hover:bg-gray-50"
+        >
+          → Compose &amp; export overlay JSON
+        </Link>
       </nav>
     </main>
   );

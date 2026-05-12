@@ -166,3 +166,49 @@ export async function deleteExtraction(formData: FormData) {
 
   revalidatePath("/extract");
 }
+
+const SEMVER_RE = /^\d+\.\d+\.\d+$/;
+
+export type CreateOverlayResult =
+  | { ok: true; id: number }
+  | { ok: false; error: string };
+
+export async function createOverlay(
+  _prev: CreateOverlayResult | null,
+  formData: FormData,
+): Promise<CreateOverlayResult> {
+  const name = (formData.get("name") as string | null)?.trim();
+  const version = (formData.get("version") as string | null)?.trim();
+  const ruleIds = formData
+    .getAll("ruleIds")
+    .map((v) => Number(v))
+    .filter((n) => Number.isInteger(n));
+
+  if (!name) return { ok: false, error: "Name required" };
+  if (!version || !SEMVER_RE.test(version)) {
+    return { ok: false, error: "Version must be semver (x.y.z)" };
+  }
+  if (ruleIds.length === 0) return { ok: false, error: "Select at least one rule" };
+
+  const [overlay] = await db
+    .insert(schema.overlays)
+    .values({ name, version, createdAt: new Date() })
+    .returning({ id: schema.overlays.id });
+
+  await db.insert(schema.overlayRules).values(
+    ruleIds.map((proposedRuleId) => ({
+      overlayId: overlay.id,
+      proposedRuleId,
+    })),
+  );
+
+  revalidatePath("/overlays");
+  return { ok: true, id: overlay.id };
+}
+
+export async function deleteOverlay(formData: FormData) {
+  const id = Number(formData.get("overlayId"));
+  if (!Number.isInteger(id)) throw new Error("Invalid overlayId");
+  await db.delete(schema.overlays).where(eq(schema.overlays.id, id));
+  revalidatePath("/overlays");
+}
