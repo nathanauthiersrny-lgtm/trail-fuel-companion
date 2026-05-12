@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 import { fetchArticle } from "./fetch-article";
+import { extractRulesFromExtraction } from "./extract-rules";
 
 export type ExtractionResult =
-  | { ok: true; id: number }
+  | { ok: true; id: number; ruleCount: number | null; extractError: string | null }
   | { ok: false; error: string };
 
 export async function createExtraction(
@@ -59,6 +60,18 @@ export async function createExtraction(
     })
     .returning({ id: schema.extractions.id });
 
+  let ruleCount: number | null = null;
+  let extractError: string | null = null;
+  if (status === "processed") {
+    try {
+      const result = await extractRulesFromExtraction(row.id);
+      ruleCount = result.ruleCount;
+    } catch (e) {
+      extractError = e instanceof Error ? e.message : String(e);
+      console.error(`[extract #${row.id}] LLM extraction failed:`, e);
+    }
+  }
+
   revalidatePath("/extract");
-  return { ok: true, id: row.id };
+  return { ok: true, id: row.id, ruleCount, extractError };
 }

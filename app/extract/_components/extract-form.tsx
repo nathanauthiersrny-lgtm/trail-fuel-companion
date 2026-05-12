@@ -73,9 +73,20 @@ export function ExtractForm() {
           <p className="text-sm text-red-600">{state.error}</p>
         )}
         {state && state.ok && (
-          <p className="text-sm text-green-700">
-            Extraction #{state.id} saved.
-          </p>
+          <div className="text-sm">
+            <p className="text-green-700">
+              Extraction #{state.id} saved
+              {state.ruleCount !== null
+                ? ` · ${state.ruleCount} rule${state.ruleCount === 1 ? "" : "s"} proposed`
+                : ""}
+              .
+            </p>
+            {state.extractError && (
+              <p className="text-amber-700">
+                Rule extraction failed: {state.extractError}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </form>
