@@ -23,7 +23,9 @@ export const articleFrontmatterSchema = z.object({
     conditions: z.array(z.string()).default([]),
     profile: z.array(z.string()).default([]),
   }),
-  last_updated: z.string().min(1),
+  last_updated: z
+    .union([z.string().min(1), z.date()])
+    .transform((v) => (typeof v === "string" ? v : v.toISOString().slice(0, 10))),
   authored_by: z.string().min(1),
 });
 
