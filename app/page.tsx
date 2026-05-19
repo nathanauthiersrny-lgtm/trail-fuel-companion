@@ -21,6 +21,12 @@ export default function Home() {
         >
           → Compose &amp; export overlay JSON
         </Link>
+        <Link
+          href="/preview"
+          className="block rounded border border-gray-300 p-3 hover:bg-gray-50"
+        >
+          → Plan enrichment previewer (A.3)
+        </Link>
       </nav>
     </main>
   );
